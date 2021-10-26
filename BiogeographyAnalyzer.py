@@ -118,19 +118,22 @@ def color_nodes(tree, specific):
 if __name__ == '__main__':
     # load tree from file containing newick
     tree = Tree('tree.nwk')
+    tree.set_outgroup('Falco_peregrinus_U83307.1')
 
     # Calculate biogeography chance and color nodes
-    tree.ladderize(direction=1)
-    get_biogeography(tree)
-    color_nodes(tree, False)
+    tree.ladderize(direction=0)
+    parrot_node = tree.children[1]
+    get_biogeography(parrot_node)
+    color_nodes(parrot_node, False)
 
     # extra tree styling
     ts = TreeStyle()
     ts.show_leaf_name = True
-    ts.mode = "c"
-    ts.arc_start = -180
-    ts.arc_span = 180
-    tree.img_style["size"] = 30
+    ts.rotation = -90
+    # ts.mode = "c"
+    # ts.arc_start = -180
+    # ts.arc_span = 180
+    parrot_node.img_style["size"] = 30
 
     # show tree
     tree.show(tree_style=ts)
