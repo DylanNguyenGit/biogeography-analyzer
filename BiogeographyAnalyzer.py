@@ -1,13 +1,10 @@
-from ete3 import Tree, NodeStyle, TreeStyle
+from ete3 import Tree, NodeStyle, TreeStyle, faces
 
 # color for each location
 NODE_COLORS = {
-    'SA': "green",
-    'NA': "blue",
-    'SEA': "red",
-    'OC': "orange",
-    'AF': "brown",
-    'MAD': "chocolate",
+    'SA': "green", 'NA': "blue",
+    'SEA': "red", 'OC': "orange",
+    'AF': "brown", 'MAD': "chocolate",
     'americas': '#1E88E5', 'asian-pacific':'#D81B60', 'africa': '#FFC107',
 }
 
@@ -48,10 +45,6 @@ def get_biogeography(node):
                     biogeo[location] += child_biogeo[location] / num_child
                 else:
                     biogeo[location] = child_biogeo[location] / num_child
-
-        # round for easy parsing of information
-        for location in biogeo:
-            biogeo[location] = round(biogeo[location], 2)
 
         # sort dictionary by highest probability and add biogeo feature to node
         node.add_feature('biogeo', dict(sorted(biogeo.items(), key=lambda x:x[1], reverse=True)))
@@ -96,24 +89,73 @@ def get_color_broad(biogeo):
     winner = score_dict[max(asian_pacific, americas, africa)]
     return NODE_COLORS[winner]
 
-def color_nodes(tree, specific):
+def add_pie_chart_node(node, specific):
     '''
-    Color the nodes based on biogeographic probabilities
-    :param tree: The ete3 tree to color
-    :param specific: True to color by specific regions and False to do the broader classification
+    Adds pie chart face to internal node
+    :param node: node to add pie chart to
+    :param specific: True if by specific location or False if broader classification
     '''
+    biogeo = node.biogeo
+    locations = []
+    colors = []
+    diameter = 30
 
-    # goes through each  node in tree
+    if specific:
+        # Go through each location and add it to piechart list and its probability
+        for location in biogeo:
+            locations.append(100 * biogeo[location])
+            colors.append(NODE_COLORS[location])
+    else:
+        # get probabilities of each specific region
+        sea = biogeo['SEA'] if 'SEA' in biogeo else 0
+        oc = biogeo['OC'] if 'OC' in biogeo else 0
+        sa = biogeo['SA'] if 'SA' in biogeo else 0
+        na = biogeo['NA'] if 'NA' in biogeo else 0
+        af = biogeo['AF'] if 'AF' in biogeo else 0
+        mad = biogeo['MAD'] if 'MAD' in biogeo else 0
+
+        # get combined scores of broader regions
+        asian_pacific = sea + oc
+        americas = sa + na
+        africa = af + mad
+
+        # add locations and probabilities
+        locations.append(100 * asian_pacific)
+        colors.append(NODE_COLORS['asian-pacific'])
+        locations.append(100 * americas)
+        colors.append(NODE_COLORS['americas'])
+        locations.append(100 * africa)
+        colors.append(NODE_COLORS['africa'])
+
+    # put piechart as face and get rid of normal node circle
+    node.img_style["size"] = 0
+    node.add_face(faces.PieChartFace(locations, diameter, diameter, colors=colors), 0)
+
+def add_pie_chart_leaf(node, specific):
+    '''
+    Adds a 'pie chart' to a leaf, but since it is only form one lcoation it just changes color of node
+    :param node: leaf to color
+    :param specific: True if by specific location or False if broader classification
+    '''
+    nstyle = NodeStyle()
+    if specific:
+        nstyle['fgcolor'] = get_color(node.biogeo)
+    else:
+        nstyle['fgcolor'] = get_color_broad(node.biogeo)
+    nstyle['size'] = 20
+    node.set_style(nstyle)
+
+def add_pie_chart_all(tree, specific):
+    '''
+    Adds pie chart to whole of tree
+    :param tree: Tree to color and add pie charts to
+    :param specific: True if by specific location or False if broader classification
+    '''
     for node in tree.traverse():
-        # make node style object
-        nstyle = NodeStyle()
-        if specific:
-            nstyle['fgcolor'] = get_color(node.biogeo)
+        if node.is_leaf():
+            add_pie_chart_leaf(node, specific)
         else:
-            nstyle['fgcolor'] = get_color_broad(node.biogeo)
-        # make leaves bigger than internal nodes
-        nstyle['size'] = 15 if node.is_leaf() else 10
-        node.set_style(nstyle)
+            add_pie_chart_node(node, specific)
 
 if __name__ == '__main__':
     # load tree from file containing newick
@@ -124,16 +166,18 @@ if __name__ == '__main__':
     tree.ladderize(direction=0)
     parrot_node = tree.children[1]
     get_biogeography(parrot_node)
-    color_nodes(parrot_node, False)
+    add_pie_chart_all(parrot_node, False)
 
     # extra tree styling
     ts = TreeStyle()
     ts.show_leaf_name = True
     ts.rotation = -90
+
     # ts.mode = "c"
     # ts.arc_start = -180
     # ts.arc_span = 180
-    parrot_node.img_style["size"] = 30
+
+    # tree.convert_to_ultrametric()
 
     # show tree
     tree.show(tree_style=ts)
