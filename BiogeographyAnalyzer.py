@@ -2,9 +2,9 @@ from ete3 import Tree, NodeStyle, TreeStyle, faces
 
 # color for each location
 NODE_COLORS = {
-    'SA': "green", 'NA': "blue",
-    'SEA': "red", 'OC': "orange",
-    'AF': "brown", 'MAD': "chocolate",
+    'SA': "#009E73", 'NA': "#0072B2",
+    'SEA': "#D55E00", 'OC': "#E69F00",
+    'AF': "#F0E442", 'MAD': "#CC79A7",
     'americas': '#1E88E5', 'asian-pacific':'#D81B60', 'africa': '#FFC107',
 }
 
